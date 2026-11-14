@@ -55,6 +55,7 @@ import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
 import { COUNTRIES } from "~/lib/ppp";
 import { parseFormData, parseParams } from "~/lib/validation";
+import { triggerDiscussionReply } from "~/lib/knock-prototype.server"; // PROTOTYPE
 
 const lessonParamsSchema = z.object({
   slug: z.string().min(1),
@@ -427,11 +428,32 @@ function createComment(
     }
   }
 
-  return db
+  const created = db
     .insert(comments)
     .values({ userId, lessonId, parentId, body: trimmed })
     .returning()
     .get();
+
+  // PROTOTYPE (knock spike): Discussion Reply → question author. Fire-and-forget.
+  if (parentId !== null) {
+    const parent = getCommentById(parentId)!;
+    const questionAuthor = db.select().from(users).where(eq(users.id, parent.userId)).get();
+    const replier = db.select().from(users).where(eq(users.id, userId)).get();
+    if (questionAuthor && replier) {
+      triggerDiscussionReply({
+        questionAuthor,
+        replier,
+        lessonId,
+        questionId: parentId,
+        replyId: created.id,
+        replyBody: trimmed,
+      })
+        .then((r) => console.log("[knock-prototype] discussion-reply triggered", r))
+        .catch((e) => console.error("[knock-prototype] trigger failed", e));
+    }
+  }
+
+  return created;
 }
 
 function updateComment(commentId: number, userId: number, body: string) {
