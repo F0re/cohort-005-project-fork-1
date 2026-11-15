@@ -2070,6 +2070,60 @@ This course is still in draft while the cluster examples are rewritten against t
 
   console.log(`Created ${countRows(schema.lessonProgress)} lesson progress records.`);
 
+  // ─── Bookmarks and Notes ───
+  // Private to the Student who made them; only on Lessons they can reach.
+
+  function bookmark(userId: number, lessonId: number, daysAgoCreated: number) {
+    db.insert(schema.bookmarks)
+      .values({ userId, lessonId, createdAt: daysAgo(daysAgoCreated) })
+      .run();
+  }
+
+  function note(
+    userId: number,
+    lessonId: number,
+    body: string,
+    daysAgoCreated: number,
+    daysAgoEdited: number
+  ) {
+    db.insert(schema.notes)
+      .values({
+        userId,
+        lessonId,
+        body,
+        createdAt: daysAgo(daysAgoCreated),
+        updatedAt: daysAgo(daysAgoEdited),
+      })
+      .run();
+  }
+
+  // Emma — flagged a couple of lessons to rewatch, and keeps notes as she goes
+  bookmark(students[0].id, course1LessonIds[4], 44);
+  bookmark(students[0].id, course1LessonIds[17], 2);
+  bookmark(students[0].id, course2LessonIds[3], 36);
+  note(
+    students[0].id,
+    course1LessonIds[4],
+    "Rewatch the part about closures.\nTry the exercise again without peeking.",
+    45,
+    20
+  );
+  note(
+    students[0].id,
+    course2LessonIds[10],
+    "Stuck on step 3 — check the repo's solution branch.",
+    3,
+    1
+  );
+
+  // Olivia — one bookmark, one note
+  bookmark(students[2].id, course1LessonIds[2], 28);
+  note(students[2].id, course1LessonIds[1], "Key idea: *keep it simple*.", 29, 29);
+
+  console.log(
+    `Created ${countRows(schema.bookmarks)} bookmarks and ${countRows(schema.notes)} notes.`
+  );
+
   // ─── Quiz Attempts ───
 
   // Helper to record a quiz attempt with answers
